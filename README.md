@@ -1,142 +1,101 @@
-# Data Science Final — Road Object Detection Dataset Preparation
+<div align="center">
 
-## Project Goal
-Multi-class object detection model (YOLOv8) for road scenes:
-potholes, vehicles (by type), road line types, people, pedestrian lanes,
-rumble strips, stop lights, crossing cones.
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1F6FEB,100:0D1117&height=170&section=header&text=Smart%20Road%20Object%20Detector&fontSize=34&fontColor=FFFFFF&fontAlignY=36&desc=YOLOv8%20detection%20for%20road%20safety&descSize=15&descAlignY=58" width="100%" alt="Smart Road Object Detector" />
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-111F68?style=flat-square)
+![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=flat-square&logo=opencv&logoColor=white)
+![Kaggle](https://img.shields.io/badge/Training-Kaggle-20BEFF?style=flat-square&logo=kaggle&logoColor=white)
+![Status](https://img.shields.io/badge/status-dataset%20preparation-1F6FEB?style=flat-square)
+
+**A multi-class YOLOv8 object detection model for road scenes, built from recorded road videos.**
+
+[Overview](#overview) · [Pipeline](#pipeline) · [Classes](#classes) · [Getting Started](#getting-started) · [Training](#training) · [Project Status](#project-status)
+
+</div>
 
 ---
 
-## Directory Structure
+## Overview
 
+This project prepares a dataset and trains a YOLOv8 model that detects road-safety objects: potholes, vehicles by type, road line types, people, pedestrian lanes, rumble strips, traffic lights, and crossing cones. It was built as a Data Science final project.
+
+## Pipeline
+
+```mermaid
+flowchart LR
+    V[Road videos<br/>720p] --> E[Extract frames<br/>1 fps, 640x640]
+    E --> F[Filter blurry<br/>and dark frames]
+    F --> S[Split<br/>70 / 20 / 10]
+    S --> A[Annotate<br/>YOLO format]
+    A --> C[Check class<br/>balance]
+    C --> T[Train YOLOv8<br/>on Kaggle]
+
+    style V fill:#0D1117,stroke:#30363D,color:#C9D1D9
+    style E fill:#0D1117,stroke:#1F6FEB,color:#C9D1D9
+    style F fill:#0D1117,stroke:#1F6FEB,color:#C9D1D9
+    style S fill:#0D1117,stroke:#1F6FEB,color:#C9D1D9
+    style A fill:#0D1117,stroke:#D29922,color:#C9D1D9
+    style C fill:#0D1117,stroke:#1F6FEB,color:#C9D1D9
+    style T fill:#0D1117,stroke:#2EA44F,color:#C9D1D9
 ```
+
+| Step | Script | What it does |
+|---|---|---|
+| 1 | `scripts/01_extract_frames.py` | Extracts 1 frame per second from each video, resized to 640x640 JPEG (quality 85) |
+| 2 | `scripts/02_filter_blurry.py` | Moves blurry or dark frames to `rejected_frames/` (`BLUR_THRESHOLD`, default 50) |
+| 3 | `scripts/03_split_dataset.py` | Shuffles with a fixed seed (42) and splits into train, val, and test |
+| 4 | Manual | Annotate bounding boxes in Roboflow, LabelImg, or CVAT and export in YOLO format |
+| 5 | `scripts/04_class_stats.py` | Reports class distribution to find imbalanced classes |
+
+## Classes
+
+| ID | Class | ID | Class |
+|---|---|---|---|
+| 0 | pothole | 7 | cone |
+| 1 | car | 8 | pedestrian_lane |
+| 2 | truck | 9 | road_line_solid |
+| 3 | motorcycle | 10 | road_line_broken |
+| 4 | bus | 11 | road_line_double_yellow |
+| 5 | person | 12 | rumble_strip |
+| 6 | traffic_light | | |
+
+Each label file has one line per object, with values normalized from 0 to 1:
+
+```text
+<class_id> <x_center> <y_center> <width> <height>
+```
+
+## Project Structure
+
+```text
 Data_Sci_Final/
-│
-├── Raw_Data/                    # Original videos (DO NOT MODIFY)
-│   ├── VID_1.mov
-│   ├── VID_2.MOV
-│   ├── VID_3.MOV
-│   └── VID_4.MOV
-│
-├── scripts/                     # Data preparation pipeline
-│   ├── 01_extract_frames.py     # Step 1: Extract frames from videos
-│   ├── 02_filter_blurry.py      # Step 2: Remove blurry/dark frames
-│   ├── 03_split_dataset.py      # Step 3: Split into train/val/test
-│   └── 04_class_stats.py        # Step 4: Check class distribution
-│
-├── extracted_frames/            # [AUTO] Raw extracted frames
-│   ├── VID_1/
-│   ├── VID_2/
-│   ├── VID_3/
-│   └── VID_4/
-│
-├── clean_frames/                # [AUTO] Frames after quality filter
-│   ├── VID_1/
-│   ├── VID_2/
-│   ├── VID_3/
-│   └── VID_4/
-│
-├── rejected_frames/             # [AUTO] Blurry/dark frames (for review)
-│
-├── dataset/                     # FINAL YOLO-ready dataset
-│   ├── dataset.yaml             # YOLO config (class names + paths)
-│   ├── images/
-│   │   ├── train/               # 70% of images
-│   │   ├── val/                 # 20% of images
-│   │   └── test/                # 10% of images
-│   └── labels/
-│       ├── train/               # YOLO .txt labels (after annotation)
-│       ├── val/
-│       └── test/
-│
-└── README.md                    # This file
+├── Raw_Data/            # Original videos (do not modify)
+├── scripts/             # Data preparation pipeline (steps 1 to 4)
+├── extracted_frames/    # Generated: raw frames per video
+├── clean_frames/        # Generated: frames that passed the quality filter
+├── rejected_frames/     # Generated: blurry or dark frames for review
+└── dataset/             # Final YOLO-ready dataset
+    ├── dataset.yaml     # Class names and paths
+    ├── images/          # train / val / test
+    └── labels/          # train / val / test
 ```
 
----
+## Getting Started
 
-## How to Run (Step by Step)
-
-### Prerequisites
 ```bash
 pip install opencv-python-headless
-```
-
-### Step 1 — Extract Frames
-Extracts 1 frame per second from VID_1–VID_4, resizes to 640×640, saves as JPEG.
-```bash
 python scripts/01_extract_frames.py
-```
-**Output:** `extracted_frames/VID_1/`, `VID_2/`, etc.
-
-### Step 2 — Filter Blurry/Dark Frames
-Removes low-quality frames automatically. Good frames go to `clean_frames/`.
-```bash
 python scripts/02_filter_blurry.py
-```
-**Tip:** Check `rejected_frames/` — if good images were rejected, lower
-`BLUR_THRESHOLD` in the script (default: 50).
-
-### Step 3 — Split into Train/Val/Test
-Shuffles and splits clean frames into the YOLO folder structure.
-```bash
 python scripts/03_split_dataset.py
-```
-**Output:** `dataset/images/train/`, `val/`, `test/` with matching empty label files.
-
-### Step 4 — Annotate (MANUAL STEP)
-Label your images with bounding boxes. Options:
-- **Roboflow** (recommended, web-based, fastest)
-- **LabelImg** (local, free)
-- **CVAT** (powerful, web-based)
-
-Export in **YOLO format** and place `.txt` files in `dataset/labels/train/`, `val/`, `test/`.
-
-### Step 5 — Check Class Distribution
-After annotation, run this to find imbalanced classes:
-```bash
+# annotate the images, then:
 python scripts/04_class_stats.py
 ```
 
----
+## Training
 
-## Class Mapping (13 Classes)
-
-| ID | Class Name              |
-|----|-------------------------|
-| 0  | pothole                 |
-| 1  | car                     |
-| 2  | truck                   |
-| 3  | motorcycle              |
-| 4  | bus                     |
-| 5  | person                  |
-| 6  | traffic_light           |
-| 7  | cone                    |
-| 8  | pedestrian_lane         |
-| 9  | road_line_solid         |
-| 10 | road_line_broken        |
-| 11 | road_line_double_yellow |
-| 12 | rumble_strip            |
-
----
-
-## YOLO Label Format
-Each `.txt` label file has one line per object:
-```
-<class_id> <x_center> <y_center> <width> <height>
-```
-All values are **normalized** (0.0 to 1.0 relative to image size).
-
-Example `VID_1_000042.txt`:
-```
-0 0.52 0.48 0.30 0.20
-1 0.75 0.40 0.15 0.10
-5 0.20 0.60 0.10 0.25
-```
-
----
-
-## Training (on Kaggle)
 After annotation, zip and upload `dataset/` to Kaggle:
+
 ```python
 !pip install ultralytics
 from ultralytics import YOLO
@@ -152,11 +111,12 @@ model.train(
 )
 ```
 
+## Project Status
+
+Dataset preparation. This repository currently holds the project documentation. The scripts, videos, and dataset described above are not committed here yet.
+
 ---
 
-## Notes
-- Raw videos are 720p, frames are resized to 640×640 during extraction
-- JPEG quality 85 balances file size and detail
-- Seed is fixed (42) for reproducible train/val/test splits
-- Multiple classes per image is expected and encouraged
-# smart-road-object-detector
+<div align="center">
+<sub>Part of the <a href="https://github.com/nixxinix">nixxinix</a> project portfolio</sub>
+</div>
